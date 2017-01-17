@@ -1,3 +1,20 @@
+// OLED SSD1306 using the I2C interface
+// Written by Larry Bank (bitbank@pobox.com)
+// Project started 1/15/2017
+//
+// The I2C writes (through a file handle) can be single or multiple bytes.
+// The write mode stays in effect throughout each call to write()
+// To write commands to the OLED controller, start a byte sequence with 0x00,
+// to write data, start a byte sequence with 0x40,
+// The OLED controller is set to "page mode". This divides the display
+// into 8 128x8 "pages" or strips. Each data write advances the output
+// automatically to the next address. The bytes are arranged such that the LSB
+// is the topmost pixel and the MSB is the bottom.
+// The font data comes from another source and must be rotated 90 degrees
+// (at init time) to match the orientation of the bits on the display memory.
+// A copy of the display memory is maintained by this code so that single pixel
+// writes can occur without having to read from the display controller.
+
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,12 +24,15 @@
 
 extern unsigned char ucFont[];
 static int iScreenOffset; // current write offset of screen data
-static unsigned char ucScreen[1024]; // holds image buffer
+static unsigned char ucScreen[1024]; // local copy of the image buffer
 static int file_i2c = 0;
 
 static void oledWriteCommand(unsigned char);
 static void RotateFont90(void);
 
+// Opens a file system handle to the I2C device
+// Initializes the OLED controller into "page mode"
+// Prepares the font data for the orientation of the display
 int oledInit(int iAddr)
 {
 const unsigned char initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa0,0xa1,0xc0,0xc8,
@@ -40,6 +60,8 @@ char *filename = "/dev/i2c-1";
 
 } /* oledInit() */
 
+// Sends a command to turn off the OLED display
+// Closes the I2C file handle
 void oledShutdown()
 {
 	if (file_i2c != 0)
@@ -50,6 +72,7 @@ void oledShutdown()
 	}
 }
 
+// Send a single byte command to the OLED controller
 static void oledWriteCommand(unsigned char c)
 {
 unsigned char buf[2];
@@ -75,6 +98,8 @@ unsigned char buf[2];
 //        write(file_i2c, buf, 2);
 //} /* oledWriteData() */
 
+// Send commands to position the "cursor" to the given
+// row and column
 static void oledSetPosition(int x, int y)
 {
 	oledWriteCommand(0xb0 | y); // go to page Y
@@ -88,6 +113,8 @@ static void oledSetPosition(int x, int y)
 //	write(file_i2c, &c, 1);
 //} /* oledWrite() */
 
+// Write a block of pixel data to the OLED
+// Length can be anything from 1 to 1024 (whole display)
 static void oledWriteDataBlock(unsigned char *ucBuf, int iLen)
 {
 unsigned char ucTemp[129];
@@ -100,6 +127,9 @@ unsigned char ucTemp[129];
 	iScreenOffset += iLen;
 }
 
+// Set (or clear) an individual pixel
+// The local copy of the frame buffer is used to avoid
+// reading data from the display controller
 int oledSetPixel(int x, int y, unsigned char ucColor)
 {
 int i;
@@ -125,6 +155,8 @@ unsigned char uc, ucOld;
 	return 0;
 } /* oledSetPixel() */
 
+// Draw a string of small (8x8) or large (16x24) characters
+// At the given col+row
 int oledWriteString(int x, int y, char *szMsg, int bLarge)
 {
 int i, iLen;
@@ -165,6 +197,8 @@ unsigned char *s;
 	return 0;
 } /* oledWriteString() */
 
+// Fill the frame buffer with a byte pattern
+// e.g. all off (0x00) or all on (0xff)
 int oledFill(unsigned char ucData)
 {
 int y;
@@ -181,6 +215,7 @@ unsigned char temp[128];
 	return 0;
 } /* oledFill() */
 
+// Fix the orientation of the font image data
 static void RotateFont90(void)
 {
 unsigned char ucTemp[64];

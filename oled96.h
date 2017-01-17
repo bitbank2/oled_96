@@ -1,7 +1,9 @@
+#ifndef OLED96_H
+#define OLED96_H
 //
 // OLED96
 // Library for accessing the 0.96" SSD1306 128x64 OLED display
-// Written by Larry Bank
+// Written by Larry Bank (bitbank@pobox.com)
 // Copyright (c) 2017 BitBank Software, Inc.
 // Project started 1/15/2017
 //
@@ -22,3 +24,4 @@ int oledWriteString(int x, int y, char *szText, int bLarge);
 // Coordinate system is pixels, not text rows (0-127, 0-63)
 int oledSetPixel(int x, int y, unsigned char ucPixel);
 
+#endif // OLED96_H
