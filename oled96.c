@@ -81,14 +81,23 @@ unsigned char buf[2];
 	write(file_i2c, buf, 2);
 } /* oledWriteCommand() */
 
-//static void oledWriteCommand2(unsigned char c, unsigned char d)
-//{
-//unsigned char buf[3];
-//	buf[0] = 0x00;
-//	buf[1] = c;
-//	buf[2] = d;
-//	write(file_i2c, buf, 3);
-//} /* oledWriteCommand2() */
+static void oledWriteCommand2(unsigned char c, unsigned char d)
+{
+unsigned char buf[3];
+	buf[0] = 0x00;
+	buf[1] = c;
+	buf[2] = d;
+	write(file_i2c, buf, 3);
+} /* oledWriteCommand2() */
+
+int oledSetContrast(unsigned char ucContrast)
+{
+        if (file_i2c == 0)
+                return -1;
+
+	oledWriteCommand2(0x81, ucContrast);
+	return 0;
+} /* oledSetContrast() */
 
 //static void oledWriteData(unsigned char c)
 //{

@@ -24,4 +24,7 @@ int oledWriteString(int x, int y, char *szText, int bLarge);
 // Coordinate system is pixels, not text rows (0-127, 0-63)
 int oledSetPixel(int x, int y, unsigned char ucPixel);
 
+// Sets the contrast (brightness) level of the display
+// Valid values are 0-255 where 0=off and 255=max brightness
+int oledSetContrast(unsigned char ucContrast);
 #endif // OLED96_H
