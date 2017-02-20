@@ -215,7 +215,7 @@ unsigned char temp[128];
 
 	if (file_i2c == 0) return -1; // not initialized
 
-	memset(&temp[1], ucData, 128);
+	memset(temp, ucData, 128);
 	for (y=0; y<8; y++)
 	{
 		oledSetPosition(0,y); // set to (0,Y)
