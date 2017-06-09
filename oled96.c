@@ -178,6 +178,7 @@ unsigned char *s;
 	{
 		if (iLen+x > 8) iLen = 8-x;
 		if (iLen < 0) return -1;
+		x *= 16;
 		for (i=0; i<iLen; i++)
 		{
 			s = &ucFont[9728 + (unsigned char)szMsg[i]*64];
