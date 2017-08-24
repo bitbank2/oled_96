@@ -1,6 +1,6 @@
 
 OLED96 is a simple C library for working with the SSD1306 128x64 OLED display
-when connected to the I2C bus. This has only been tested on a RPi3.
+when connected to the I2C bus. Tested on various ARM SBCs.
 The idea is to provide a simple interface for C programmers to make use of 
 those low-cost OLED displays without having to read the data sheet or figure
 out I2C programming.

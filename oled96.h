@@ -8,7 +8,7 @@
 // Project started 1/15/2017
 //
 // Initialize the OLED96 library for a specific I2C address
-int oledInit(int iAddress);
+int oledInit(int iChannel, int iAddress);
 
 // Turns off the display and closes the I2C handle
 void oledShutdown(void);

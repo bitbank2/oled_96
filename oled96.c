@@ -33,13 +33,15 @@ static void RotateFont90(void);
 // Opens a file system handle to the I2C device
 // Initializes the OLED controller into "page mode"
 // Prepares the font data for the orientation of the display
-int oledInit(int iAddr)
+int oledInit(int iChannel, int iAddr)
 {
 const unsigned char initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa0,0xa1,0xc0,0xc8,
 			0xda,0x12,0x81,0xff,0xa4,0xa6,0xd5,0x80,0x8d,0x14,
 			0xaf,0x20,0x02};
-char *filename = "/dev/i2c-1";
+char filename[32];
+int rc;
 
+	sprintf(filename, "/dev/i2c-%d", iChannel);
 	if ((file_i2c = open(filename, O_RDWR)) < 0)
 	{
 		fprintf(stderr, "Failed to open the i2c bus\n");
@@ -54,9 +56,9 @@ char *filename = "/dev/i2c-1";
 		return -1;
 	}
 
-	write(file_i2c, initbuf, sizeof(initbuf));
+	rc = write(file_i2c, initbuf, sizeof(initbuf));
 	RotateFont90(); // fix font orientation for OLED
-	return 0;
+	return !(rc == sizeof(initbuf));
 
 } /* oledInit() */
 
@@ -76,18 +78,24 @@ void oledShutdown()
 static void oledWriteCommand(unsigned char c)
 {
 unsigned char buf[2];
+int rc;
+
 	buf[0] = 0x00; // command introducer
 	buf[1] = c;
-	write(file_i2c, buf, 2);
+	rc = write(file_i2c, buf, 2);
+	if (rc) {} // suppress warning
 } /* oledWriteCommand() */
 
 static void oledWriteCommand2(unsigned char c, unsigned char d)
 {
 unsigned char buf[3];
+int rc;
+
 	buf[0] = 0x00;
 	buf[1] = c;
 	buf[2] = d;
-	write(file_i2c, buf, 3);
+	rc = write(file_i2c, buf, 3);
+	if (rc) {} // suppress warning
 } /* oledWriteCommand2() */
 
 int oledSetContrast(unsigned char ucContrast)
@@ -127,10 +135,12 @@ static void oledSetPosition(int x, int y)
 static void oledWriteDataBlock(unsigned char *ucBuf, int iLen)
 {
 unsigned char ucTemp[129];
+int rc;
 
 	ucTemp[0] = 0x40; // data command
 	memcpy(&ucTemp[1], ucBuf, iLen);
-	write(file_i2c, ucTemp, iLen+1);
+	rc = write(file_i2c, ucTemp, iLen+1);
+	if (rc) {} // suppress warning
 	// Keep a copy in local buffer
 	memcpy(&ucScreen[iScreenOffset], ucBuf, iLen);
 	iScreenOffset += iLen;

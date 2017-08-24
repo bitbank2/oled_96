@@ -5,13 +5,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "oled96.h"
 
 int main(int argc, char *argv[])
 {
 int i;
 
-	i=oledInit(0x3c);
+	i=oledInit(0, 0x3c); // for Raspberry Pi, use channel 1
 	if (i == 0)
 	{
 		oledFill(0); // fill with black
