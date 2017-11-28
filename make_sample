@@ -10,4 +10,4 @@ sample.o: sample.c
 	$(CC) $(CFLAGS) sample.c
 
 clean:
-	rm -rf *o sample
+	rm -rf *.o sample

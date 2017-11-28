@@ -15,4 +15,4 @@ fonts.o: fonts.c
 	$(CC) $(CFLAGS) fonts.c
 
 clean:
-	rm -rf *o liboled.a
+	rm -rf *.o liboled.a
