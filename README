@@ -9,3 +9,10 @@ Written by Larry Bank
 Project started 1/15/2017
 bitbank@pobox.com
 
+Features:
+--------
+- Efficient individual pixel drawing
+- Small and large text
+- Invert and flip 180 options
+- Brightness control
+

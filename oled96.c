@@ -29,37 +29,55 @@ static int file_i2c = 0;
 
 static void oledWriteCommand(unsigned char);
 static void RotateFont90(void);
-
+//
 // Opens a file system handle to the I2C device
 // Initializes the OLED controller into "page mode"
 // Prepares the font data for the orientation of the display
-int oledInit(int iChannel, int iAddr)
+// Returns 0 for success, 1 for failure
+//
+int oledInit(int iChannel, int iAddr, int bFlip, int bInvert)
 {
 const unsigned char initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa0,0xa1,0xc0,0xc8,
 			0xda,0x12,0x81,0xff,0xa4,0xa6,0xd5,0x80,0x8d,0x14,
 			0xaf,0x20,0x02};
 char filename[32];
 int rc;
+unsigned char uc[4];
 
 	sprintf(filename, "/dev/i2c-%d", iChannel);
 	if ((file_i2c = open(filename, O_RDWR)) < 0)
 	{
 		fprintf(stderr, "Failed to open the i2c bus\n");
 		file_i2c = 0;
-		return -1;
+		return 1;
 	}
 
 	if (ioctl(file_i2c, I2C_SLAVE, iAddr) < 0)
 	{
 		fprintf(stderr, "Failed to acquire bus access or talk to slave\n");
 		file_i2c = 0;
-		return -1;
+		return 1;
 	}
 
 	rc = write(file_i2c, initbuf, sizeof(initbuf));
 	RotateFont90(); // fix font orientation for OLED
-	return !(rc == sizeof(initbuf));
-
+	if (rc != sizeof(initbuf))
+		return 1;
+	if (bInvert)
+	{
+		uc[0] = 0; // command
+		uc[1] = 0xa7; // invert command
+		rc = write(file_i2c, uc, 2);
+	}
+	if (bFlip) // rotate display 180
+	{
+		uc[0] = 0; // command
+		uc[1] = 0xa0;
+		rc = write(file_i2c, uc, 2);
+		uc[1] = 0xc0;
+		rc = write(file_i2c, uc, 2);
+	}
+	return 0;
 } /* oledInit() */
 
 // Sends a command to turn off the OLED display

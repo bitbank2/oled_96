@@ -8,7 +8,10 @@
 // Project started 1/15/2017
 //
 // Initialize the OLED96 library for a specific I2C address
-int oledInit(int iChannel, int iAddress);
+// Optionally enable inverted or flipped mode
+// returns 0 for success, 1 for failure
+//
+int oledInit(int iChannel, int iAddress, int bFlip, int bInvert);
 
 // Turns off the display and closes the I2C handle
 void oledShutdown(void);
