@@ -17,12 +17,14 @@ int i;
 	{
 		oledFill(0); // fill with black
 		oledWriteString(0,0,"OLED 96 Library!",0);
+		oledWriteString(2,2,"BIG!",1);
 		for (i=0; i<64; i++)
 		{
 			oledSetPixel(i, 16+i, 1);
 			oledSetPixel(127-i, 16+i, 1);
 		}
-		usleep(8000000); // leave it showing for 8 seconds
+		printf("Press ENTER to quit\n");
+		getchar();
 		oledShutdown();
 	}
    return 0;

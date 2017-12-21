@@ -28,7 +28,6 @@ static unsigned char ucScreen[1024]; // local copy of the image buffer
 static int file_i2c = 0;
 
 static void oledWriteCommand(unsigned char);
-static void RotateFont90(void);
 //
 // Opens a file system handle to the I2C device
 // Initializes the OLED controller into "page mode"
@@ -60,7 +59,6 @@ unsigned char uc[4];
 	}
 
 	rc = write(file_i2c, initbuf, sizeof(initbuf));
-	RotateFont90(); // fix font orientation for OLED
 	if (rc != sizeof(initbuf))
 		return 1;
 	if (bInvert)
@@ -191,9 +189,12 @@ unsigned char uc, ucOld;
 	}
 	return 0;
 } /* oledSetPixel() */
-
+//
 // Draw a string of small (8x8) or large (16x24) characters
 // At the given col+row
+// The X position is in character widths (8 or 16)
+// The Y position is in memory pages (8 lines each)
+//
 int oledWriteString(int x, int y, char *szMsg, int bLarge)
 {
 int i, iLen;
@@ -252,55 +253,3 @@ unsigned char temp[128];
 	} // for y
 	return 0;
 } /* oledFill() */
-
-// Fix the orientation of the font image data
-static void RotateFont90(void)
-{
-unsigned char ucTemp[64];
-int i, j, x, y;
-unsigned char c, c2, ucMask, *s, *d;
-
-	// Rotate the 8x8 font
-	for (i=0; i<256; i++) // fix 8x8 font by rotating it 90 deg clockwise
-	{
-		s = &ucFont[i*8];
-		ucMask = 0x1;
-		for (y=0; y<8; y++)
-		{
-			c = 0;
-			for (x=0; x<8; x++)
-			{
-				c >>= 1;
-				if (s[x] & ucMask) c |= 0x80;
-			}
-			ucMask <<= 1;
-			ucTemp[7-y] = c;
-		}
-		memcpy(s, ucTemp, 8);
-	}
-	// Rotate the 16x32 font
-	for (i=0; i<128; i++) // only 128 characters
-	{
-		for (j=0; j<4; j++)
-		{
-			s = &ucFont[9728 + 12 + (i*64) + (j*16)];
-			d = &ucTemp[j*16];
-			ucMask = 0x1;
-			for (y=0; y<8; y++)
-			{
-				c = c2 = 0;
-				for (x=0; x<8; x++)
-				{
-					c >>= 1;
-					c2 >>= 1;
-					if (s[(x*2)] & ucMask) c |= 0x80;
-					if (s[(x*2)+1] & ucMask) c2 |= 0x80;
-				}
-				ucMask <<= 1;
-				d[7-y] = c;
-				d[15-y] = c2;
-			} // for y
-		} // for j
-		memcpy(&ucFont[9728 + (i*64)], ucTemp, 64);
-	} // for i
-} /* RotateFont90() */
