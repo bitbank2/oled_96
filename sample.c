@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include "oled96.h"
 
+extern unsigned char ucSmallFont[];
+
 int main(int argc, char *argv[])
 {
 int i;
@@ -16,8 +18,9 @@ int i;
 	if (i == 0)
 	{
 		oledFill(0); // fill with black
-		oledWriteString(0,0,"OLED 96 Library!",0);
-		oledWriteString(2,2,"BIG!",1);
+		oledWriteString(0,0,"OLED 96 Library!",FONT_NORMAL);
+		oledWriteString(2,2,"BIG!",FONT_BIG);
+		oledWriteString(3,5,"Narrow Font (6x8)", FONT_SMALL);
 		for (i=0; i<64; i++)
 		{
 			oledSetPixel(i, 16+i, 1);

@@ -21,8 +21,9 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
+#include "oled96.h"
 
-extern unsigned char ucFont[];
+extern unsigned char ucFont[], ucSmallFont[];
 static int iScreenOffset; // current write offset of screen data
 static unsigned char ucScreen[1024]; // local copy of the image buffer
 static int file_i2c = 0;
@@ -190,20 +191,22 @@ unsigned char uc, ucOld;
 	return 0;
 } /* oledSetPixel() */
 //
-// Draw a string of small (8x8) or large (16x24) characters
+// Draw a string of small (8x8), large (16x24), or very small (6x8)  characters
 // At the given col+row
 // The X position is in character widths (8 or 16)
 // The Y position is in memory pages (8 lines each)
 //
-int oledWriteString(int x, int y, char *szMsg, int bLarge)
+int oledWriteString(int x, int y, char *szMsg, int iSize)
 {
 int i, iLen;
 unsigned char *s;
 
 	if (file_i2c == 0) return -1; // not initialized
+	if (iSize < FONT_NORMAL || iSize > FONT_SMALL)
+		return -1;
 
 	iLen = strlen(szMsg);
-	if (bLarge) // draw 16x32 font
+	if (iSize == FONT_BIG) // draw 16x32 font
 	{
 		if (iLen+x > 8) iLen = 8-x;
 		if (iLen < 0) return -1;
@@ -221,9 +224,9 @@ unsigned char *s;
 //			oledWriteDataBlock(s+48, 16);	
 		}
 	}
-	else // draw 8x8 font
+	else if (iSize == FONT_NORMAL) // draw 8x8 font
 	{
-		oledSetPosition(x, y);
+		oledSetPosition(x*8, y);
 		if (iLen + x > 16) iLen = 16 - x; // can't display it
 		if (iLen < 0)return -1;
 
@@ -232,6 +235,17 @@ unsigned char *s;
 			s = &ucFont[(unsigned char)szMsg[i] * 8];
 			oledWriteDataBlock(s, 8); // write character pattern
 		}	
+	}
+	else // 6x8
+	{
+		oledSetPosition(x*6, y);
+		if (iLen + x > 21) iLen = 21 - x;
+		if (iLen < 0) return -1;
+		for (i=0; i<iLen; i++)
+		{
+			s = &ucSmallFont[(unsigned char)szMsg[i]*6];
+			oledWriteDataBlock(s, 6);
+		}
 	}
 	return 0;
 } /* oledWriteString() */

@@ -7,6 +7,13 @@
 // Copyright (c) 2017 BitBank Software, Inc.
 // Project started 1/15/2017
 //
+typedef enum
+{
+   FONT_NORMAL=0,	// 8x8
+   FONT_BIG,		// 16x24
+   FONT_SMALL		// 6x8
+} FONTSIZE;
+
 // Initialize the OLED96 library for a specific I2C address
 // Optionally enable inverted or flipped mode
 // returns 0 for success, 1 for failure
