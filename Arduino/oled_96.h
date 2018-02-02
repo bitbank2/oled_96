@@ -17,7 +17,7 @@ void oledSetContrast(unsigned char ucContrast);
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row
 //
-int oledWriteString(int x, int y, char *szMsg, int iSize);
+int oledWriteString(int x, int y, char *szMsg, int iSize, int bInvert);
 //
 // Fill the frame buffer with a byte pattern
 // e.g. all off (0x00) or all on (0xff)

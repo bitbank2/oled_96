@@ -584,7 +584,7 @@ const byte ucBigFont[]PROGMEM = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
   // 5x7 font (in 6x8 cell)
-unsigned char ucSmallFont[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3e,0x45,0x51,0x45,0x3e,0x00,0x3e,0x6b,0x6f,
+const byte ucSmallFont[]PROGMEM = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3e,0x45,0x51,0x45,0x3e,0x00,0x3e,0x6b,0x6f,
   0x6b,0x3e,0x00,0x1c,0x3e,0x7c,0x3e,0x1c,0x00,0x18,0x3c,0x7e,0x3c,0x18,0x00,0x30,
   0x36,0x7f,0x36,0x30,0x00,0x18,0x5c,0x7e,0x5c,0x18,0x00,0x00,0x18,0x18,0x00,0x00,
   0x00,0xff,0xe7,0xe7,0xff,0xff,0x00,0x3c,0x24,0x24,0x3c,0x00,0x00,0xc3,0xdb,0xdb,
@@ -787,10 +787,23 @@ unsigned char uc, ucOld;
 } /* oledSetPixel() */
 
 //
+// Invert font data
+//
+void InvertBytes(byte *pData, byte bLen)
+{
+byte i;
+   for (i=0; i<bLen; i++)
+   {
+      *pData = ~(*pData);
+      pData++;
+   }
+} /* InvertBytes() */
+
+//
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row
 //
-int oledWriteString(int x, int y, char *szMsg, int iSize)
+int oledWriteString(int x, int y, char *szMsg, int iSize, int bInvert)
 {
 int i, iLen, iFontOff;
 unsigned char c, *s, ucTemp[16];
@@ -799,7 +812,7 @@ unsigned char c, *s, ucTemp[16];
     oledSetPosition(x, y);
     if (iSize == FONT_NORMAL) // 8x8 font
     {
-       if (iLen*8 + x > 127) iLen = (127 - x)/8; // can't display it
+       if (iLen*8 + x > 128) iLen = (128 - x)/8; // can't display it
        if (iLen < 0)return -1;
 
        for (i=0; i<iLen; i++)
@@ -808,6 +821,7 @@ unsigned char c, *s, ucTemp[16];
          iFontOff =  (int)c * 8;
          // we can't directly use the pointer to FLASH memory, so copy to a local buffer
          memcpy_P(ucTemp, &ucFont[iFontOff], 8);
+         if (bInvert) InvertBytes(ucTemp, 8);
          oledCachedWrite(ucTemp, 8);
 //         oledWriteDataBlock(ucTemp, 8); // write character pattern
        }
@@ -815,7 +829,7 @@ unsigned char c, *s, ucTemp[16];
     }
     else if (iSize == FONT_LARGE) // 16x32 font
     {
-      if (iLen*16+x > 127) iLen = (127-x)/16;
+      if (iLen*16+x > 128) iLen = (128-x)/16;
       if (iLen < 0) return -1;
       for (i=0; i<iLen; i++)
       {
@@ -823,35 +837,38 @@ unsigned char c, *s, ucTemp[16];
           // we can't directly use the pointer to FLASH memory, so copy to a local buffer
           oledSetPosition(x+(i*16), y);
           memcpy_P(ucTemp, s, 16);
+          if (bInvert) InvertBytes(ucTemp, 16);
           oledWriteDataBlock(ucTemp, 16); // write character pattern
           oledSetPosition(x+(i*16), y+1);
           memcpy_P(ucTemp, s+16, 16);
+          if (bInvert) InvertBytes(ucTemp, 16);
           oledWriteDataBlock(ucTemp, 16); // write character pattern
           if (y <= 5)
           {
              oledSetPosition(x+(i*16), y+2);
              memcpy_P(ucTemp, s+32, 16);
+             if (bInvert) InvertBytes(ucTemp, 16);
              oledWriteDataBlock(ucTemp, 16); // write character pattern
           }
           if (y <= 4)
           {
              oledSetPosition(x+(i*16), y+3);
              memcpy_P(ucTemp, s+48, 16);
+             if (bInvert) InvertBytes(ucTemp, 16);
              oledWriteDataBlock(ucTemp, 16); // write character pattern
           }
        }
     }
     else if (iSize == FONT_SMALL) // 6x8 font
     {
-       if (iLen*6 + x > 127) iLen = (127 - x)/6; // can't display it
+       if (iLen*6 + x > 128) iLen = (128 - x)/6; // can't display it
        if (iLen < 0)return -1;
 
        for (i=0; i<iLen; i++)
        {
-         c = (unsigned char)szMsg[i];
-         iFontOff =  (int)c * 6;
          // we can't directly use the pointer to FLASH memory, so copy to a local buffer
-         memcpy_P(ucTemp, &ucSmallFont[iFontOff], 6);
+         memcpy_P(ucTemp, &ucSmallFont[(unsigned char)szMsg[i]*6], 6);
+         if (bInvert) InvertBytes(ucTemp, 6);
 //         oledWriteDataBlock(ucTemp, 6); // write character pattern
          oledCachedWrite(ucTemp, 6);
        }
