@@ -800,6 +800,72 @@ byte i;
 } /* InvertBytes() */
 
 //
+// Load a 128x64 1-bpp Windows bitmap
+// Pass the pointer to the beginning of the BMP file
+// First pass version assumes a full screen bitmap
+//
+int oledLoadBMP(byte *pBMP)
+{
+int16_t i16;
+int iOffBits, q, y, j; // offset to bitmap data
+int iPitch;
+byte x, z, b, *s;
+byte dst_mask;
+byte ucTemp[16]; // process 16 bytes at a time
+byte bFlipped = false;
+
+  i16 = pgm_read_word(pBMP);
+  if (i16 != 0x4d42) // must start with 'BM'
+     return -1; // not a BMP file
+  i16 = pgm_read_word(pBMP + 18);
+  if (i16 != 128) // must be 128 pixels wide
+     return -1;
+  i16 = pgm_read_word(pBMP + 22);
+  if (i16 != 64 && i16 != -64) // must be 64 pixels tall
+     return -1;
+  if (i16 == 64) // BMP is flipped vertically (typical)
+     bFlipped = true;
+  i16 = pgm_read_word(pBMP + 28);
+  if (i16 != 1) // must be 1 bit per pixel
+     return -1;
+  iOffBits = pgm_read_word(pBMP + 10);
+  iPitch = 16;
+  if (bFlipped)
+  { 
+    iPitch = -16;
+    iOffBits += (63 * 16); // start from bottom
+  }
+
+// rotate the data and send it to the display
+  for (y=0; y<8; y++) // 8 lines of 8 pixels
+  {
+     oledSetPosition(0, y);
+     for (j=0; j<8; j++) // do 8 sections of 16 columns
+     {
+         s = &pBMP[iOffBits + (j*2) + (y * iPitch*8)]; // source line
+         memset(ucTemp, 0, 16); // start with all black
+         for (x=0; x<16; x+=8) // do each block of 16x8 pixels
+         {
+            dst_mask = 1;
+            for (q=0; q<8; q++) // gather 8 rows
+            {
+               b = pgm_read_byte(s + (q * iPitch));
+               for (z=0; z<8; z++) // gather up the 8 bits of this column
+               {
+                  if (b & 0x80)
+                      ucTemp[x+z] |= dst_mask;
+                  b <<= 1;
+               } // for z
+               dst_mask <<= 1;
+            } // for q
+            s++; // next source byte
+         } // for x
+         oledWriteDataBlock(ucTemp, 16);
+     } // for j
+  } // for y
+} /* oledLoadBMP() */
+
+//
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row
 //

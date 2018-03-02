@@ -14,6 +14,13 @@ void oledShutdown();
 //
 void oledSetContrast(unsigned char ucContrast);
 //
+// Load a 128x64 1-bpp Windows bitmap
+// Pass the pointer to the beginning of the BMP file
+// First pass version assumes a full screen bitmap
+//
+int oledLoadBMP(byte *pBMP);
+
+//
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row
 //
