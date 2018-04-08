@@ -30,4 +30,13 @@ int oledWriteString(int x, int y, char *szMsg, int iSize, int bInvert);
 // e.g. all off (0x00) or all on (0xff)
 //
 void oledFill(unsigned char ucData);
+//
+// Set (or clear) an individual pixel
+// The local copy of the frame buffer is used to avoid
+// reading data from the display controller
+// (which isn't possible in most configurations)
+// This function needs the USE_BACKBUFFER macro to be defined
+// otherwise, new pixels will erase old pixels within the same byte
+//
+int oledSetPixel(int x, int y, unsigned char ucColor);
 

@@ -3,6 +3,11 @@
 #include <Wire.h>
 #include <oled_96.h>
 
+//
+// Comment out this line to gain 1K of RAM and not use a backing buffer
+//
+#define USE_BACKBUFFER
+
 // small (8x8) font
 const byte ucFont[]PROGMEM = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x7e,0x81,0x95,0xb1,0xb1,0x95,0x81,0x7e,
   0x7e,0xff,0xeb,0xcf,0xcf,0xeb,0xff,0x7e,0x0e,0x1f,0x3f,0x7e,0x3f,0x1f,0x0e,0x00,
@@ -635,7 +640,9 @@ const byte ucSmallFont[]PROGMEM = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3e,0x45,
 
 // some globals
 static int iScreenOffset; // current write offset of screen data
-//static unsigned char ucScreen[1024]; // local copy of the image buffer
+#ifdef USE_BACKBUFFER
+static unsigned char ucScreen[1024]; // local copy of the image buffer
+#endif
 static int oled_addr;
 #define MAX_CACHE 32
 static byte bCache[MAX_CACHE] = {0x40}; // for faster character drawing
@@ -653,7 +660,11 @@ static void I2CWrite(int iAddr, unsigned char *pData, int iLen)
 static void oledCachedFlush(void)
 {
        I2CWrite(oled_addr, bCache, bEnd); // write the old data
-       bEnd = 1;  
+#ifdef USE_BACKBUFFER
+       memcpy(&ucScreen[iScreenOffset], &bCache[1], bEnd-1);
+       iScreenOffset += (bEnd - 1);
+#endif
+       bEnd = 1;
 } /* oledCachedFlush() */
 
 static void oledCachedWrite(byte *pData, byte bLen)
@@ -757,8 +768,10 @@ unsigned char ucTemp[129];
   memcpy(&ucTemp[1], ucBuf, iLen);
   I2CWrite(oled_addr, ucTemp, iLen+1);
   // Keep a copy in local buffer
-//  memcpy(&ucScreen[iScreenOffset], ucBuf, iLen);
+#ifdef USE_BACKBUFFER
+  memcpy(&ucScreen[iScreenOffset], ucBuf, iLen);
   iScreenOffset += iLen;
+#endif
 }
 
 // Set (or clear) an individual pixel
@@ -772,7 +785,12 @@ unsigned char uc, ucOld;
   i = ((y >> 3) * 128) + x;
   if (i < 0 || i > 1023) // off the screen
     return -1;
-  uc = ucOld = 0; //ucScreen[i];
+#ifdef USE_BACKBUFFER
+  uc = ucOld = ucScreen[i];
+#else
+  uc = ucOld = 0;
+#endif
+
   uc &= ~(0x1 << (y & 7));
   if (ucColor)
   {
@@ -782,6 +800,9 @@ unsigned char uc, ucOld;
   {
     oledSetPosition(x, y>>3);
     oledWriteDataBlock(&uc, 1);
+#ifdef USE_BACKBUFFER
+    ucScreen[i] = uc;
+#endif
   }
   return 0;
 } /* oledSetPixel() */
@@ -961,5 +982,8 @@ unsigned char temp[16];
       oledWriteDataBlock(temp, 16); 
     } // for x
   } // for y
+#ifdef USE_BACKBUFFER
+   memset(ucScreen, ucData, 1024);
+#endif
 } /* oledFill() */
 
