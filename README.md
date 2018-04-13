@@ -18,6 +18,11 @@ Features:<br>
 - Optional inverted text<br>
 - Brightness control<br>
 <br>
-*NEW* Display a Windows BMP (Arduino version).<br<
+*NEW* Display a Windows BMP (Arduino version).<br>
 This code was added to make it simpler to display a full screen logo bitmap by
 just copying a 1-bpp Windows BMP into the flash memory and calling 1 function.
+<br>
+
+If you find this code useful, please consider buying me a cup of coffee
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SR4F44J2UR8S4)
