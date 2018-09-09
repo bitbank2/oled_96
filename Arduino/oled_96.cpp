@@ -692,7 +692,7 @@ const unsigned char oled_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8
   Wire.begin(); // Initiate the Wire library
   Wire.setClock(400000); // use high speed I2C mode (default is 100Khz)
 
-  I2CWrite(oled_addr, oled_initbuf, sizeof(oled_initbuf));
+  I2CWrite(oled_addr, (unsigned char *)oled_initbuf, sizeof(oled_initbuf));
   if (bInvert)
   {
     uc[0] = 0; // command
@@ -920,7 +920,7 @@ unsigned char c, *s, ucTemp[16];
       if (iLen < 0) return -1;
       for (i=0; i<iLen; i++)
       {
-          s = &ucBigFont[(unsigned char)szMsg[i]*64];
+          s = (unsigned char *)&ucBigFont[(unsigned char)szMsg[i]*64];
           // we can't directly use the pointer to FLASH memory, so copy to a local buffer
           oledSetPosition(x+(i*16), y);
           memcpy_P(ucTemp, s, 16);
