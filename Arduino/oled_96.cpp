@@ -1,5 +1,7 @@
 #include <Arduino.h>
+#ifdef __AVR__
 #include <avr/pgmspace.h>
+#endif
 #include <Wire.h>
 #include <oled_96.h>
 
@@ -884,6 +886,7 @@ byte bFlipped = false;
          oledWriteDataBlock(ucTemp, 16);
      } // for j
   } // for y
+  return 0;
 } /* oledLoadBMP() */
 
 //
