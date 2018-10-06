@@ -1,10 +1,17 @@
 #define FONT_NORMAL 0
 #define FONT_LARGE 1
 #define FONT_SMALL 2
+
+// OLED type for init function
+enum {
+  OLED_128x32 = 1,
+  OLED_128x64
+};
+
 //
 // Initializes the OLED controller into "page mode"
 //
-void oledInit(int iAddr, int bFlip, int bInvert);
+void oledInit(int iAddr, int iType, int bFlip, int bInvert);
 //
 // Sends a command to turn off the OLED display
 //
@@ -19,7 +26,11 @@ void oledSetContrast(unsigned char ucContrast);
 // First pass version assumes a full screen bitmap
 //
 int oledLoadBMP(byte *pBMP);
-
+//
+// Power up/down the display
+// useful for low power situations
+//
+void oledPower(byte bOn);
 //
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row

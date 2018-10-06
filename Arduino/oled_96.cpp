@@ -645,7 +645,7 @@ static int iScreenOffset; // current write offset of screen data
 #ifdef USE_BACKBUFFER
 static unsigned char ucScreen[1024]; // local copy of the image buffer
 #endif
-static int oled_addr;
+static int oled_addr, oled_type;
 #define MAX_CACHE 32
 static byte bCache[MAX_CACHE] = {0x40}; // for faster character drawing
 static byte bEnd = 1;
@@ -683,18 +683,24 @@ static void oledCachedWrite(byte *pData, byte bLen)
 //
 // Initializes the OLED controller into "page mode"
 //
-void oledInit(int iAddr, int bFlip, int bInvert)
+void oledInit(int iAddr, int iType, int bFlip, int bInvert)
 {
 unsigned char uc[4];
-const unsigned char oled_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8,
+const unsigned char oled64_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8,
       0xda,0x12,0x81,0xff,0xa4,0xa6,0xd5,0x80,0x8d,0x14,
       0xaf,0x20,0x02};
-
+const unsigned char oled32_initbuf[] = {
+0x00,0xae,0xd5,0x80,0xa8,0x1f,0xd3,0x00,0x40,0x8d,0x14,0xa1,0xc8,0xda,0x02,
+0x81,0x7f,0xd9,0xf1,0xdb,0x40,0xa4,0xa6,0xaf};
   oled_addr = iAddr;
+  oled_type = iType;
   Wire.begin(); // Initiate the Wire library
   Wire.setClock(400000); // use high speed I2C mode (default is 100Khz)
 
-  I2CWrite(oled_addr, (unsigned char *)oled_initbuf, sizeof(oled_initbuf));
+  if (iType == OLED_128x32)
+     I2CWrite(oled_addr, (unsigned char *)oled32_initbuf, sizeof(oled32_initbuf));
+  else
+     I2CWrite(oled_addr, (unsigned char *)oled64_initbuf, sizeof(oled64_initbuf));
   if (bInvert)
   {
     uc[0] = 0; // command
@@ -711,12 +717,15 @@ const unsigned char oled_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8
   }
 } /* oledInit() */
 //
-// Sends a command to turn off the OLED display
+// Sends a command to turn on or off the OLED display
 //
-void oledShutdown()
+void oledPower(byte bOn)
 {
-    oledWriteCommand(0xaE); // turn off OLED
-}
+    if (bOn)
+      oledWriteCommand(0xaf); // turn on OLED
+    else
+      oledWriteCommand(0xae); // turn off OLED
+} /* oledPower() */
 
 // Send a single byte command to the OLED controller
 static void oledWriteCommand(unsigned char c)
@@ -974,10 +983,13 @@ unsigned char c, *s, ucTemp[16];
 void oledFill(unsigned char ucData)
 {
 int x, y;
+int iLines;
 unsigned char temp[16];
 
+  iLines = (oled_type == OLED_128x32) ? 4:8;
+
   memset(temp, ucData, 16);
-  for (y=0; y<8; y++)
+  for (y=0; y<iLines; y++)
   {
     oledSetPosition(0,y); // set to (0,Y)
     for (x=0; x<8; x++) // wiring library has a 32-byte buffer, so send 16 bytes so that the data prefix (0x40) can fit
