@@ -2,6 +2,7 @@
 #ifdef __AVR__
 #include <avr/pgmspace.h>
 #endif
+#include <BitBang_I2C.h>
 #include <Wire.h>
 #include <oled_96.h>
 
@@ -645,23 +646,31 @@ static int iScreenOffset; // current write offset of screen data
 #ifdef USE_BACKBUFFER
 static unsigned char ucScreen[1024]; // local copy of the image buffer
 #endif
-static int oled_addr, oled_type;
+static int oled_flip, oled_addr, oled_type;
+static int iSDAPin, iSCLPin;
 #define MAX_CACHE 32
 static byte bCache[MAX_CACHE] = {0x40}; // for faster character drawing
 static byte bEnd = 1;
 static void oledWriteCommand(unsigned char c);
 
 // Wrapper function to write I2C data on Arduino
-static void I2CWrite(int iAddr, unsigned char *pData, int iLen)
+static void _I2CWrite(int iAddr, unsigned char *pData, int iLen)
 {
-  Wire.beginTransmission(iAddr);
-  Wire.write(pData, iLen);
-  Wire.endTransmission();
-} /* I2CWrite() */
+  if (iSDAPin != -1 && iSCLPin != -1)
+  {
+     I2CWrite(iAddr, pData, iLen);
+  }
+  else
+  {
+     Wire.beginTransmission(iAddr);
+     Wire.write(pData, iLen);
+     Wire.endTransmission();
+  }
+} /* _I2CWrite() */
 
 static void oledCachedFlush(void)
 {
-       I2CWrite(oled_addr, bCache, bEnd); // write the old data
+       _I2CWrite(oled_addr, bCache, bEnd); // write the old data
 #ifdef USE_BACKBUFFER
        memcpy(&ucScreen[iScreenOffset], &bCache[1], bEnd-1);
        iScreenOffset += (bEnd - 1);
@@ -683,7 +692,7 @@ static void oledCachedWrite(byte *pData, byte bLen)
 //
 // Initializes the OLED controller into "page mode"
 //
-void oledInit(int iAddr, int iType, int bFlip, int bInvert)
+void oledInit(int iAddr, int iType, int bFlip, int bInvert, int sda, int scl)
 {
 unsigned char uc[4];
 const unsigned char oled64_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8,
@@ -692,28 +701,39 @@ const unsigned char oled64_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0x
 const unsigned char oled32_initbuf[] = {
 0x00,0xae,0xd5,0x80,0xa8,0x1f,0xd3,0x00,0x40,0x8d,0x14,0xa1,0xc8,0xda,0x02,
 0x81,0x7f,0xd9,0xf1,0xdb,0x40,0xa4,0xa6,0xaf};
+
   oled_addr = iAddr;
   oled_type = iType;
+  oled_flip = bFlip;
+  iSDAPin = sda;
+  iSCLPin = scl;
+
+if (sda != -1 && scl != -1)
+{
+  I2CInit(sda, scl, 400000);
+}
+else
+{
   Wire.begin(); // Initiate the Wire library
   Wire.setClock(400000); // use high speed I2C mode (default is 100Khz)
-
+}
   if (iType == OLED_128x32)
-     I2CWrite(oled_addr, (unsigned char *)oled32_initbuf, sizeof(oled32_initbuf));
-  else
-     I2CWrite(oled_addr, (unsigned char *)oled64_initbuf, sizeof(oled64_initbuf));
+     _I2CWrite(oled_addr, (unsigned char *)oled32_initbuf, sizeof(oled32_initbuf));
+  else // 128x64 and 64x32
+     _I2CWrite(oled_addr, (unsigned char *)oled64_initbuf, sizeof(oled64_initbuf));
   if (bInvert)
   {
     uc[0] = 0; // command
     uc[1] = 0xa7; // invert command
-    I2CWrite(oled_addr, uc, 2);
+    _I2CWrite(oled_addr, uc, 2);
   }
   if (bFlip) // rotate display 180
   {
     uc[0] = 0; // command
     uc[1] = 0xa0;
-    I2CWrite(oled_addr, uc, 2);
+    _I2CWrite(oled_addr, uc, 2);
     uc[1] = 0xc0;
-    I2CWrite(oled_addr, uc, 2);
+    _I2CWrite(oled_addr, uc, 2);
   }
 } /* oledInit() */
 //
@@ -734,7 +754,7 @@ unsigned char buf[2];
 
   buf[0] = 0x00; // command introducer
   buf[1] = c;
-  I2CWrite(oled_addr, buf, 2);
+  _I2CWrite(oled_addr, buf, 2);
 } /* oledWriteCommand() */
 
 static void oledWriteCommand2(unsigned char c, unsigned char d)
@@ -744,7 +764,7 @@ unsigned char buf[3];
   buf[0] = 0x00;
   buf[1] = c;
   buf[2] = d;
-  I2CWrite(oled_addr, buf, 3);
+  _I2CWrite(oled_addr, buf, 3);
 } /* oledWriteCommand2() */
 
 //
@@ -761,6 +781,12 @@ void oledSetContrast(unsigned char ucContrast)
 //
 static void oledSetPosition(int x, int y)
 {
+  if (oled_type == OLED_64x32) // visible display starts at column 32, row 4
+  {
+    x += 32; // display is centered in VRAM, so this is always true
+    if (oled_flip == 0) // non-flipped display starts from line 4
+       y += 4;
+  }
   oledWriteCommand(0xb0 | y); // go to page Y
   oledWriteCommand(0x00 | (x & 0xf)); // // lower col addr
   oledWriteCommand(0x10 | ((x >> 4) & 0xf)); // upper col addr
@@ -777,7 +803,7 @@ unsigned char ucTemp[129];
 
   ucTemp[0] = 0x40; // data command
   memcpy(&ucTemp[1], ucBuf, iLen);
-  I2CWrite(oled_addr, ucTemp, iLen+1);
+  _I2CWrite(oled_addr, ucTemp, iLen+1);
   // Keep a copy in local buffer
 #ifdef USE_BACKBUFFER
   memcpy(&ucScreen[iScreenOffset], ucBuf, iLen);
@@ -983,16 +1009,16 @@ unsigned char c, *s, ucTemp[16];
 void oledFill(unsigned char ucData)
 {
 int x, y;
-int iLines;
+int iLines, iCols;
 unsigned char temp[16];
 
-  iLines = (oled_type == OLED_128x32) ? 4:8;
-
+  iLines = (oled_type == OLED_128x32 || oled_type == OLED_64x32) ? 4:8;
+  iCols = (oled_type == OLED_64x32) ? 4:8;
   memset(temp, ucData, 16);
   for (y=0; y<iLines; y++)
   {
     oledSetPosition(0,y); // set to (0,Y)
-    for (x=0; x<8; x++) // wiring library has a 32-byte buffer, so send 16 bytes so that the data prefix (0x40) can fit
+    for (x=0; x<iCols; x++) // wiring library has a 32-byte buffer, so send 16 bytes so that the data prefix (0x40) can fit
     {
       oledWriteDataBlock(temp, 16); 
     } // for x

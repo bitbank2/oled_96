@@ -5,13 +5,16 @@
 // OLED type for init function
 enum {
   OLED_128x32 = 1,
-  OLED_128x64
+  OLED_128x64,
+  OLED_64x32
 };
 
 //
 // Initializes the OLED controller into "page mode"
+// If SDAPin and SCLPin are not -1, then bit bang I2C on those pins
+// Otherwise use the Wire library
 //
-void oledInit(int iAddr, int iType, int bFlip, int bInvert);
+void oledInit(int iAddr, int iType, int bFlip, int bInvert, int iSDAPin, int iSCLPin);
 //
 // Sends a command to turn off the OLED display
 //
