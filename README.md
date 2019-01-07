@@ -10,6 +10,12 @@ Written by Larry Bank<br>
 Project started 1/15/2017<br>
 bitbank@pobox.com<br>
 
+Latest Changes:<br>
+---------------<br>
+The Arduino version now includes support for my BitBang_I2C library so that any
+two GPIO pins can be used to drive the display.<br>
+The library now supports 3 sizes of SSD1306 displays: 128x64, 128x32, and 64x32<br>
+
 Features:<br>
 --------<br>
 - Efficient individual pixel drawing<br>
