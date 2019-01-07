@@ -17,6 +17,7 @@ Features:<br>
 - Invert and flip 180 options (entire display)<br>
 - Optional inverted text<br>
 - Brightness control<br>
+- Support for 64x32, 128x32, 128x64 and 132x64 (SH1106) displays<br>
 <br>
 *NEW* Display a Windows BMP (Arduino version).<br>
 This code was added to make it simpler to display a full screen logo bitmap by

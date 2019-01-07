@@ -9,7 +9,7 @@
 //
 // Comment out this line to gain 1K of RAM and not use a backing buffer
 //
-#define USE_BACKBUFFER
+//#define USE_BACKBUFFER
 
 // small (8x8) font
 const byte ucFont[]PROGMEM = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x7e,0x81,0x95,0xb1,0xb1,0x95,0x81,0x7e,
@@ -690,6 +690,19 @@ static void oledCachedWrite(byte *pData, byte bLen)
   
 } /* oledCachedWrite() */
 //
+// Turn off the display
+//
+void oledShutdown(void)
+{
+uint8_t uc[2];
+
+    uc[0] = 0; // command
+    uc[1] = 0xae; // display off
+    _I2CWrite(oled_addr, uc, 2);
+
+} /* oledShutdown() */
+
+//
 // Initializes the OLED controller into "page mode"
 //
 void oledInit(int iAddr, int iType, int bFlip, int bInvert, int sda, int scl)
@@ -710,7 +723,7 @@ const unsigned char oled32_initbuf[] = {
 
 if (sda != -1 && scl != -1)
 {
-  I2CInit(sda, scl, 400000);
+  I2CInit(sda, scl, 800000);
 }
 else
 {
@@ -719,7 +732,7 @@ else
 }
   if (iType == OLED_128x32)
      _I2CWrite(oled_addr, (unsigned char *)oled32_initbuf, sizeof(oled32_initbuf));
-  else // 128x64 and 64x32
+  else // 132x64, 128x64 and 64x32
      _I2CWrite(oled_addr, (unsigned char *)oled64_initbuf, sizeof(oled64_initbuf));
   if (bInvert)
   {
@@ -786,6 +799,10 @@ static void oledSetPosition(int x, int y)
     x += 32; // display is centered in VRAM, so this is always true
     if (oled_flip == 0) // non-flipped display starts from line 4
        y += 4;
+  }
+  else if (oled_type == OLED_132x64) // SH1106 has 128 pixels centered in 132
+  {
+    x += 2;
   }
   oledWriteCommand(0xb0 | y); // go to page Y
   oledWriteCommand(0x00 | (x & 0xf)); // // lower col addr

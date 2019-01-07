@@ -6,6 +6,7 @@
 enum {
   OLED_128x32 = 1,
   OLED_128x64,
+  OLED_132x64,
   OLED_64x32
 };
 
