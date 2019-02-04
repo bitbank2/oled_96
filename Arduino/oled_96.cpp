@@ -10,6 +10,9 @@
 // Comment out this line to gain 1K of RAM and not use a backing buffer
 //
 //#define USE_BACKBUFFER
+#ifndef __AVR__
+#define USE_BACKBUFFER
+#endif // !__AVR__
 
 // small (8x8) font
 const byte ucFont[]PROGMEM = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x7e,0x81,0x95,0xb1,0xb1,0x95,0x81,0x7e,
@@ -705,7 +708,7 @@ uint8_t uc[2];
 //
 // Initializes the OLED controller into "page mode"
 //
-void oledInit(int iAddr, int iType, int bFlip, int bInvert, int sda, int scl)
+void oledInit(int iAddr, int iType, int bFlip, int bInvert, int sda, int scl, int iSpeed)
 {
 unsigned char uc[4];
 const unsigned char oled64_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8,
@@ -723,12 +726,12 @@ const unsigned char oled32_initbuf[] = {
 
 if (sda != -1 && scl != -1)
 {
-  I2CInit(sda, scl, 800000);
+  I2CInit(sda, scl, iSpeed);
 }
 else
 {
   Wire.begin(); // Initiate the Wire library
-  Wire.setClock(400000); // use high speed I2C mode (default is 100Khz)
+  Wire.setClock(iSpeed); // use high speed I2C mode (default is 100Khz)
 }
   if (iType == OLED_128x32)
      _I2CWrite(oled_addr, (unsigned char *)oled32_initbuf, sizeof(oled32_initbuf));
@@ -1019,6 +1022,42 @@ unsigned char c, *s, ucTemp[16];
   return 0;
 } /* oledWriteString() */
 
+//
+// Dump a screen's worth of data directly to the display
+// Try to speed it up by comparing the new bytes with the existing buffer
+//
+void oledDumpBuffer(uint8_t *pBuffer)
+{
+int x, y;
+int iLines, iCols;
+uint8_t bNeedPos, *pSrc = ucScreen;
+
+  iLines = (oled_type == OLED_128x32 || oled_type == OLED_64x32) ? 4:8;
+  iCols = (oled_type == OLED_64x32) ? 4:8;
+  for (y=0; y<iLines; y++)
+  {
+    bNeedPos = 1; // start of a new line means we need to set the position too
+    for (x=0; x<iCols; x++) // wiring library has a 32-byte buffer, so send 16 bytes so that the data prefix (0x40) can fit
+    {
+      if (memcmp(pSrc, pBuffer, 16) != 0) // doesn't match, need to send it
+      {
+        if (bNeedPos) // need to reposition output cursor?
+        {
+           bNeedPos = 0;
+           oledSetPosition(x*16, y);
+        }
+        oledWriteDataBlock(pBuffer, 16);
+      }
+      else
+      {
+         bNeedPos = 1; // we're skipping a block, so next time will need to set the new position
+      }
+      pSrc += 16;
+      pBuffer += 16;
+    } // for x
+  } // for y
+
+} /* oledDumpBuffer() */
 //
 // Fill the frame buffer with a byte pattern
 // e.g. all off (0x00) or all on (0xff)

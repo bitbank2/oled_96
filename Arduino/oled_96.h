@@ -15,7 +15,7 @@ enum {
 // If SDAPin and SCLPin are not -1, then bit bang I2C on those pins
 // Otherwise use the Wire library
 //
-void oledInit(int iAddr, int iType, int bFlip, int bInvert, int iSDAPin, int iSCLPin);
+void oledInit(int iAddr, int iType, int bFlip, int bInvert, int iSDAPin, int iSCLPin, int iSpeed);
 //
 // Sends a command to turn off the OLED display
 //
@@ -54,4 +54,9 @@ void oledFill(unsigned char ucData);
 // otherwise, new pixels will erase old pixels within the same byte
 //
 int oledSetPixel(int x, int y, unsigned char ucColor);
+//
+// Dump an entire custom buffer to the display
+// useful for custom animation effects
+//
+void oledDumpBuffer(uint8_t *pBuffer);
 
