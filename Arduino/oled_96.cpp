@@ -879,6 +879,8 @@ void oledSetContrast(unsigned char ucContrast)
 //
 static void oledSetPosition(int x, int y)
 {
+unsigned char buf[8];
+
   iScreenOffset = (y*128)+x;
   if (oled_type == OLED_64x32) // visible display starts at column 32, row 4
   {
@@ -890,9 +892,11 @@ static void oledSetPosition(int x, int y)
   {
     x += 2;
   }
-  oledWriteCommand(0xb0 | y); // go to page Y
-  oledWriteCommand(0x00 | (x & 0xf)); // // lower col addr
-  oledWriteCommand(0x10 | ((x >> 4) & 0xf)); // upper col addr
+  buf[0] = 0x00; // command introducer
+  buf[1] = 0xb0 | y; // set page to Y
+  buf[2] = x & 0xf; // lower column address
+  buf[3] = 0x10 | (x >> 4); // upper column addr
+  _I2CWrite(oled_addr, buf, 4);
 }
 
 //
