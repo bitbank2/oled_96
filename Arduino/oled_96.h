@@ -11,11 +11,16 @@ enum {
 };
 
 //
-// Initializes the OLED controller into "page mode"
+// Initializes the OLED controller into "page mode" on I2C
 // If SDAPin and SCLPin are not -1, then bit bang I2C on those pins
 // Otherwise use the Wire library
 //
-void oledInit(int iAddr, int iType, int bFlip, int bInvert, int iSDAPin, int iSCLPin, int iSpeed);
+void oledInit(int iAddr, int iType, int bFlip, int bInvert, int iSDAPin, int iSCLPin, int32_t iSpeed);
+//
+// Initialize an SPI version of the display
+//
+void oledSPIInit(int iType, int iDC, int iCS, int iReset, int bFlip, int bInvert, int32_t iSpeed);
+
 //
 // Sends a command to turn off the OLED display
 //

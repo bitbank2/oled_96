@@ -4,6 +4,7 @@
 #endif
 #include <BitBang_I2C.h>
 #include <Wire.h>
+#include <SPI.h>
 #include <oled_96.h>
 
 //
@@ -644,7 +645,16 @@ const byte ucSmallFont[]PROGMEM = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3e,0x45,
   0x4c,0x00,0x00,0x08,0x3e,0x41,0x41,0x00,0x00,0x00,0x00,0x77,0x00,0x00,0x00,0x00,
   0x41,0x41,0x3e,0x08,0x00,0x02,0x01,0x02,0x01,0x00,0x00,0x3c,0x26,0x23,0x26,0x3c};
 
+// Initialization sequences
+const unsigned char oled64_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8,
+      0xda,0x12,0x81,0xff,0xa4,0xa6,0xd5,0x80,0x8d,0x14,
+      0xaf,0x20,0x02};
+const unsigned char oled32_initbuf[] = {
+0x00,0xae,0xd5,0x80,0xa8,0x1f,0xd3,0x00,0x40,0x8d,0x14,0xa1,0xc8,0xda,0x02,
+0x81,0x7f,0xd9,0xf1,0xdb,0x40,0xa4,0xa6,0xaf};
+
 // some globals
+static int iCSPin, iDCPin, iResetPin;
 static int iScreenOffset; // current write offset of screen data
 #ifdef USE_BACKBUFFER
 static unsigned char ucScreen[1024]; // local copy of the image buffer
@@ -659,16 +669,26 @@ static void oledWriteCommand(unsigned char c);
 // Wrapper function to write I2C data on Arduino
 static void _I2CWrite(int iAddr, unsigned char *pData, int iLen)
 {
-  if (iSDAPin != -1 && iSCLPin != -1)
+  if (iCSPin != -1) // we're writing to SPI, treat it differently
   {
-     I2CWrite(iAddr, pData, iLen);
+    digitalWrite(iDCPin, (pData[0] == 0) ? LOW : HIGH); // data versus command
+    digitalWrite(iCSPin, LOW);
+    SPI.transfer(&pData[1], iLen-1);
+    digitalWrite(iCSPin, HIGH);
   }
-  else
+  else // must be I2C
   {
-     Wire.beginTransmission(iAddr);
-     Wire.write(pData, iLen);
-     Wire.endTransmission();
-  }
+    if (iSDAPin != -1 && iSCLPin != -1)
+    {
+       I2CWrite(iAddr, pData, iLen);
+    }
+    else
+    {
+       Wire.beginTransmission(iAddr);
+       Wire.write(pData, iLen);
+       Wire.endTransmission();
+    }
+  } // I2C
 } /* _I2CWrite() */
 
 static void oledCachedFlush(void)
@@ -706,23 +726,85 @@ uint8_t uc[2];
 } /* oledShutdown() */
 
 //
+// Initialize the OLED controller for SPI mode
+//
+void oledSPIInit(int iType, int iDC, int iCS, int iReset, int bFlip, int bInvert, int32_t iSpeed)
+{
+uint8_t uc[32], *s;
+int iLen;
+
+  iDCPin = iDC;
+  iCSPin = iCS;
+  iResetPin = iReset;
+  oled_type = iType;
+  oled_flip = bFlip;
+
+  pinMode(iDCPin, OUTPUT);
+  pinMode(iCSPin, OUTPUT);
+  digitalWrite(iCSPin, HIGH);
+
+  // Reset it
+  if (iResetPin != -1)
+  {
+    pinMode(iResetPin, OUTPUT); 
+    digitalWrite(iResetPin, HIGH);
+    delay(50);
+    digitalWrite(iResetPin, LOW);
+    delay(50);
+    digitalWrite(iResetPin, HIGH);
+    delay(10);
+  }
+// Initialize SPI
+  SPI.begin();
+  SPI.beginTransaction(SPISettings(iSpeed, MSBFIRST, SPI_MODE0));
+//  SPI.setClockDivider(16);
+//  SPI.setBitOrder(MSBFIRST);
+//  SPI.setDataMode(SPI_MODE0);
+
+  if (iType == OLED_128x32)
+  {
+     s = (uint8_t *)oled32_initbuf;
+     iLen = sizeof(oled32_initbuf);
+  }
+  else
+  {
+     s = (uint8_t *)oled64_initbuf;
+     iLen = sizeof(oled64_initbuf);
+  }
+  memcpy(uc, s, iLen); // do it from RAM
+  _I2CWrite(oled_addr, s, iLen);
+
+  if (bInvert)
+  {
+    uc[0] = 0; // command
+    uc[1] = 0xa7; // invert command
+    _I2CWrite(oled_addr, uc, 2);
+  }
+  if (bFlip) // rotate display 180
+  {
+    uc[0] = 0; // command
+    uc[1] = 0xa0;
+    _I2CWrite(oled_addr, uc, 2);
+    uc[0] = 0;
+    uc[1] = 0xc0;
+    _I2CWrite(oled_addr, uc, 2);
+  }
+
+} /* oledSPIInit() */
+//
 // Initializes the OLED controller into "page mode"
 //
-void oledInit(int iAddr, int iType, int bFlip, int bInvert, int sda, int scl, int iSpeed)
+void oledInit(int iAddr, int iType, int bFlip, int bInvert, int sda, int scl, int32_t iSpeed)
 {
 unsigned char uc[4];
-const unsigned char oled64_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8,
-      0xda,0x12,0x81,0xff,0xa4,0xa6,0xd5,0x80,0x8d,0x14,
-      0xaf,0x20,0x02};
-const unsigned char oled32_initbuf[] = {
-0x00,0xae,0xd5,0x80,0xa8,0x1f,0xd3,0x00,0x40,0x8d,0x14,0xa1,0xc8,0xda,0x02,
-0x81,0x7f,0xd9,0xf1,0xdb,0x40,0xa4,0xa6,0xaf};
 
   oled_addr = iAddr;
   oled_type = iType;
   oled_flip = bFlip;
   iSDAPin = sda;
   iSCLPin = scl;
+// Disable SPI mode code
+  iCSPin = iDCPin = iResetPin = -1;
 
 if (sda != -1 && scl != -1)
 {
@@ -797,6 +879,7 @@ void oledSetContrast(unsigned char ucContrast)
 //
 static void oledSetPosition(int x, int y)
 {
+  iScreenOffset = (y*128)+x;
   if (oled_type == OLED_64x32) // visible display starts at column 32, row 4
   {
     x += 32; // display is centered in VRAM, so this is always true
@@ -810,7 +893,6 @@ static void oledSetPosition(int x, int y)
   oledWriteCommand(0xb0 | y); // go to page Y
   oledWriteCommand(0x00 | (x & 0xf)); // // lower col addr
   oledWriteCommand(0x10 | ((x >> 4) & 0xf)); // upper col addr
-  iScreenOffset = (y*128)+x;
 }
 
 //
@@ -822,6 +904,8 @@ static void oledWriteDataBlock(unsigned char *ucBuf, int iLen)
 unsigned char ucTemp[129];
 
   ucTemp[0] = 0x40; // data command
+// Copying the data has the benefit in SPI mode of not letting
+// the original data get overwritten by the SPI.transfer() function
   memcpy(&ucTemp[1], ucBuf, iLen);
   _I2CWrite(oled_addr, ucTemp, iLen+1);
   // Keep a copy in local buffer
@@ -1030,7 +1114,10 @@ void oledDumpBuffer(uint8_t *pBuffer)
 {
 int x, y;
 int iLines, iCols;
-uint8_t bNeedPos, *pSrc = ucScreen;
+uint8_t bNeedPos;
+#ifdef USE_BACKBUFFER
+uint8_t *pSrc = ucScreen;
+#endif
 
   iLines = (oled_type == OLED_128x32 || oled_type == OLED_64x32) ? 4:8;
   iCols = (oled_type == OLED_64x32) ? 4:8;
@@ -1039,7 +1126,11 @@ uint8_t bNeedPos, *pSrc = ucScreen;
     bNeedPos = 1; // start of a new line means we need to set the position too
     for (x=0; x<iCols; x++) // wiring library has a 32-byte buffer, so send 16 bytes so that the data prefix (0x40) can fit
     {
+#ifdef USE_BACKBUFFER
       if (memcmp(pSrc, pBuffer, 16) != 0) // doesn't match, need to send it
+#else
+      if (1)
+#endif
       {
         if (bNeedPos) // need to reposition output cursor?
         {
@@ -1052,7 +1143,9 @@ uint8_t bNeedPos, *pSrc = ucScreen;
       {
          bNeedPos = 1; // we're skipping a block, so next time will need to set the new position
       }
+#ifdef USE_BACKBUFFER
       pSrc += 16;
+#endif
       pBuffer += 16;
     } // for x
   } // for y
