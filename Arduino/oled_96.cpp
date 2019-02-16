@@ -673,7 +673,14 @@ static void _I2CWrite(int iAddr, unsigned char *pData, int iLen)
   {
     digitalWrite(iDCPin, (pData[0] == 0) ? LOW : HIGH); // data versus command
     digitalWrite(iCSPin, LOW);
+#ifdef HAL_ESP32_HAL_H_ 
+   {
+   uint8_t ucTemp[1024];
+        SPI.transferBytes(&pData[1], ucTemp, iLen-1);
+   }
+#else
     SPI.transfer(&pData[1], iLen-1);
+#endif
     digitalWrite(iCSPin, HIGH);
   }
   else // must be I2C
