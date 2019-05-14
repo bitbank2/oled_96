@@ -27,6 +27,7 @@ extern unsigned char ucFont[], ucSmallFont[];
 static int iScreenOffset; // current write offset of screen data
 static unsigned char ucScreen[1024]; // local copy of the image buffer
 static int file_i2c = 0;
+static int oled_type, oled_flip;
 
 static void oledWriteCommand(unsigned char);
 //
@@ -35,19 +36,24 @@ static void oledWriteCommand(unsigned char);
 // Prepares the font data for the orientation of the display
 // Returns 0 for success, 1 for failure
 //
-int oledInit(int iChannel, int iAddr, int bFlip, int bInvert)
+int oledInit(int iChannel, int iAddr, int iType, int bFlip, int bInvert)
 {
-const unsigned char initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa0,0xa1,0xc0,0xc8,
-			0xda,0x12,0x81,0xff,0xa4,0xa6,0xd5,0x80,0x8d,0x14,
-			0xaf,0x20,0x02};
+const unsigned char oled64_initbuf[]={0x00,0xae,0xa8,0x3f,0xd3,0x00,0x40,0xa1,0xc8,
+      0xda,0x12,0x81,0xff,0xa4,0xa6,0xd5,0x80,0x8d,0x14,
+      0xaf,0x20,0x02};
+const unsigned char oled32_initbuf[] = {
+0x00,0xae,0xd5,0x80,0xa8,0x1f,0xd3,0x00,0x40,0x8d,0x14,0xa1,0xc8,0xda,0x02,
+0x81,0x7f,0xd9,0xf1,0xdb,0x40,0xa4,0xa6,0xaf};
+
 char filename[32];
-int rc;
 unsigned char uc[4];
 
+	oled_type = iType;
+	oled_flip = bFlip;
 	sprintf(filename, "/dev/i2c-%d", iChannel);
 	if ((file_i2c = open(filename, O_RDWR)) < 0)
 	{
-		fprintf(stderr, "Failed to open the i2c bus\n");
+		fprintf(stderr, "Failed to open i2c bus %d\n", iChannel);
 		file_i2c = 0;
 		return 1;
 	}
@@ -59,22 +65,27 @@ unsigned char uc[4];
 		return 1;
 	}
 
-	rc = write(file_i2c, initbuf, sizeof(initbuf));
-	if (rc != sizeof(initbuf))
-		return 1;
+	if (iType == OLED_128x32)
+	{
+		write(file_i2c, oled32_initbuf, sizeof(oled32_initbuf));
+	}
+	else
+	{
+		write(file_i2c, oled64_initbuf, sizeof(oled64_initbuf));
+	}
 	if (bInvert)
 	{
 		uc[0] = 0; // command
 		uc[1] = 0xa7; // invert command
-		rc = write(file_i2c, uc, 2);
+		write(file_i2c, uc, 2);
 	}
 	if (bFlip) // rotate display 180
 	{
 		uc[0] = 0; // command
 		uc[1] = 0xa0;
-		rc = write(file_i2c, uc, 2);
+		write(file_i2c, uc, 2);
 		uc[1] = 0xc0;
-		rc = write(file_i2c, uc, 2);
+		write(file_i2c, uc, 2);
 	}
 	return 0;
 } /* oledInit() */
@@ -136,10 +147,21 @@ int oledSetContrast(unsigned char ucContrast)
 // row and column
 static void oledSetPosition(int x, int y)
 {
+	iScreenOffset = (y*128)+x;
+	if (oled_type == OLED_64x32) // visible display starts at column 32, row 4
+	{
+		x += 32; // display is centered in VRAM, so this is always true
+		if (oled_flip == 0) // non-flipped display starts from line 4
+		y += 4;
+	}
+	else if (oled_type == OLED_132x64) // SH1106 has 128 pixels centered in 132
+	{
+		x += 2;
+	}
+
 	oledWriteCommand(0xb0 | y); // go to page Y
 	oledWriteCommand(0x00 | (x & 0xf)); // // lower col addr
 	oledWriteCommand(0x10 | ((x >> 4) & 0xf)); // upper col addr
-	iScreenOffset = (y*128)+x;
 }
 
 //static void oledWrite(unsigned char c)
@@ -256,14 +278,18 @@ int oledFill(unsigned char ucData)
 {
 int y;
 unsigned char temp[128];
+int iLines, iCols;
 
 	if (file_i2c == 0) return -1; // not initialized
 
+	iLines = (oled_type == OLED_128x32 || oled_type == OLED_64x32) ? 4:8;
+	iCols = (oled_type == OLED_64x32) ? 4:8;
+
 	memset(temp, ucData, 128);
-	for (y=0; y<8; y++)
+	for (y=0; y<iLines; y++)
 	{
 		oledSetPosition(0,y); // set to (0,Y)
-		oledWriteDataBlock(temp, 128); // fill with data byte
+		oledWriteDataBlock(temp, iCols*16); // fill with data byte
 	} // for y
 	return 0;
 } /* oledFill() */

@@ -7,6 +7,14 @@
 // Copyright (c) 2017 BitBank Software, Inc.
 // Project started 1/15/2017
 //
+// OLED type for init function
+enum {
+  OLED_128x32 = 1,
+  OLED_128x64,
+  OLED_132x64,
+  OLED_64x32
+};
+
 typedef enum
 {
    FONT_NORMAL=0,	// 8x8
@@ -18,7 +26,7 @@ typedef enum
 // Optionally enable inverted or flipped mode
 // returns 0 for success, 1 for failure
 //
-int oledInit(int iChannel, int iAddress, int bFlip, int bInvert);
+int oledInit(int iChannel, int iAddress, int iType, int bFlip, int bInvert);
 
 // Turns off the display and closes the I2C handle
 void oledShutdown(void);
