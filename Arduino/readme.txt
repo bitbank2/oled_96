@@ -6,4 +6,4 @@ Installation:
 2) (In the Arduino IDE) Sketch > Include Library > Add .ZIP Library > select the downloaded file > Open
 
 It will be available as a library to import into your Arduino Sketch.
-On an AVR Arduino, the fonts+code take a total of 5368 bytes of program memory.
+On an AVR Arduino, the large font is generated dynamically by stretching the 'NORMAL' 8x8 font 2x in both dimensions to save 6K of FLASH memory.
