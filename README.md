@@ -1,6 +1,6 @@
 ** OLED_96 **
 
-OLED_96 is a simple C library for working with the SSD1306 128x64 OLED display
+OLED_96 is a simple C library for working with SSD1306/SH1106 OLED displays
 when connected to the I2C bus. Tested on various ARM SBCs and Arduinos.
 The idea is to provide a simple interface for C programmers to make use of 
 those low-cost OLED displays without having to read the data sheet or figure
@@ -12,7 +12,8 @@ bitbank@pobox.com<br>
 
 Latest Changes:<br>
 ---------------<br>
-The Arduino version now includes support for my BitBang_I2C library so that any
+The Linux version now supports the 3 display sizes<br>
+The Arduino version now includes support for my BitBang_I2C library so that any<br>
 two GPIO pins can be used to drive the display.<br>
 The library now supports 3 sizes of SSD1306 displays (and SH1106): 132x64, 128x64, 128x32, and 64x32<br>
 
@@ -24,6 +25,7 @@ Features:<br>
 - Optional inverted text<br>
 - Brightness control<br>
 - Support for 64x32, 128x32, 128x64 and 132x64 (SH1106) displays<br>
+- Line draw function
 <br>
 *NEW* Display a Windows BMP (Arduino version).<br>
 This code was added to make it simpler to display a full screen logo bitmap by
