@@ -8,8 +8,6 @@
 #include <unistd.h>
 #include "oled96.h"
 
-extern unsigned char ucSmallFont[];
-
 int main(int argc, char *argv[])
 {
 int i, iChannel;
