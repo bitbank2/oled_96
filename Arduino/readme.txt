@@ -1,9 +1,4 @@
-This is the Arduino sketch version which works as an importable library.
+The Arduino library has been moved to https://github.com/bitbank2/ss_oled
 
-Installation:
-------------
-1) Download the library: https://github.com/bitbank2/oled_96/archive/master.zip
-2) (In the Arduino IDE) Sketch > Include Library > Add .ZIP Library > select the downloaded file > Open
+The new version conforms to the Arduino IDE library manager
 
-It will be available as a library to import into your Arduino Sketch.
-On an AVR Arduino, the fonts+code take a total of 5368 bytes of program memory.
