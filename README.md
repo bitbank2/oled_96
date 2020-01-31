@@ -1,3 +1,10 @@
+This code is now deprecated<br>
+=
+Please use my newer OLED library --> ss_oled<br>
+It includes both Arduino and Linux support<br>
+<br>
+https://github.com/bitbank2/ss_oled
+<br><br>
 ** OLED_96 **
 
 OLED_96 is a simple C library for working with SSD1306/SH1106 OLED displays
